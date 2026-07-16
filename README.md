@@ -4,7 +4,7 @@
 
 **A scalable asynchronous log export system built with Node.js, RabbitMQ, Redis, and Docker.**
 
-The system is designed to handle thousands of log files efficiently by offloading heavy compression tasks to background workers using a message queue architecture.
+The system efficiently exports and compresses thousands of log files by delegating heavy tasks to asynchronous background workers powered by RabbitMQ.
 
 ![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?logo=node.js&logoColor=white)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.x-FF6600?logo=rabbitmq&logoColor=white)
@@ -16,54 +16,43 @@ The system is designed to handle thousands of log files efficiently by offloadin
 
 ---
 
-# 📖 Project Overview
+## 📖 Project Overview
 
-Traditional log export systems usually process file compression directly inside the main application server. This approach increases response time significantly and limits scalability when handling thousands of files simultaneously.
+Traditional log export systems usually perform compression directly inside the application server, causing long response times and poor scalability.
 
-This project adopts an **asynchronous architecture** by separating responsibilities into several independent services:
+This project adopts an **asynchronous architecture**, where the API Gateway immediately returns a **Job ID** while the actual compression process runs in the background through RabbitMQ and Worker Services.
 
-- **API Gateway** handles incoming requests.
-- **RabbitMQ** queues export jobs.
-- **Worker Service** processes compression tasks.
-- **Redis** stores real-time job status.
-- **Storage** stores raw logs and generated ZIP files.
+> [!NOTE]
+> The client never waits for the compression process. Once a request is submitted, the API immediately returns a Job ID that can be used to monitor export progress.
 
-The API returns a **Job ID immediately**, allowing users to monitor progress without waiting for the compression process to finish.
+## 📚 Table of Contents
 
----
+- [Features](#-features)
+- [System Architecture](#-system-architecture)
+- [Tech Stack](#-tech-stack)
+- [Folder Structure](#-folder-structure)
+- [Installation](#-installation)
+- [Docker Setup](#-docker-setup)
+- [Running the Project](#-running-the-project)
+- [API Documentation](#-api-documentation)
+- [Performance Testing](#-performance-testing)
+- [Screenshots](#-screenshots)
+- [Roadmap](#-roadmap)
+- [Author](#-author)
 
-# ✨ Features
+## Features
 
-- ✅ Asynchronous Background Processing
+- ✅ API Gateway Architecture
 - ✅ RabbitMQ Message Queue
-- ✅ Redis Job Status Tracking
-- ✅ API Gateway Pattern
 - ✅ Worker Microservice
+- ✅ Redis Job Status Tracking
 - ✅ ZIP Compression
-- ✅ Dockerized Environment
+- ✅ Background Processing
+- ✅ Dockerized Deployment
 - ✅ RESTful API
-- ✅ Load & Performance Tested
-- ✅ Scalable Architecture
+- ✅ Load Tested with Apache JMeter
 
----
-
-# 🛠 Tech Stack
-
-| Technology | Purpose             |
-| ---------- | ------------------- |
-| Node.js    | Backend Runtime     |
-| Express.js | REST API            |
-| RabbitMQ   | Message Broker      |
-| Redis      | Job Status Cache    |
-| Docker     | Containerization    |
-| Archiver   | ZIP Compression     |
-| UUID       | Job ID Generator    |
-| JMeter     | Performance Testing |
-| Postman    | API Testing         |
-
----
-
-# 🏗 System Architecture
+## 🏗 System Architecture
 
 <p align="center">
 <img src="docs/architecture.png" width="900">
@@ -71,87 +60,66 @@ The API returns a **Job ID immediately**, allowing users to monitor progress wit
 
 ### Architecture Components
 
-### API Gateway
+| Component      | Responsibility                                                  |
+| -------------- | --------------------------------------------------------------- |
+| API Gateway    | Receive requests, validate input, generate Job ID, publish jobs |
+| RabbitMQ       | Queue export jobs                                               |
+| Worker Service | Consume jobs, compress logs, update Redis                       |
+| Redis          | Store real-time job status                                      |
+| Storage        | Store raw logs and ZIP results                                  |
 
-- Receive client request
-- Validate request
-- Generate Job ID
-- Store initial status in Redis
-- Publish job to RabbitMQ
-- Return response immediately
-
-### RabbitMQ
-
-Acts as a queue between the API Gateway and Worker Service.
-
-### Worker Service
-
-- Listen to RabbitMQ
-- Read thousands of log files
-- Compress into ZIP
-- Store ZIP file
-- Update Redis status
-
-### Redis
-
-Stores job status:
-
-- Pending
-- Processing
-- Completed
-- Failed
-
----
-
-# 🔄 Sequence Diagram
+### Sequence Diagram
 
 <p align="center">
 <img src="docs/sequencediagram.png" width="900">
 </p>
 
----
+### Worker Processing Flow
 
-# 📁 Folder Structure
+```mermaid
+flowchart TD
+    A[Receive Job]
+    --> B[Update Redis<br/>Processing]
+    --> C[Read Raw Logs]
+    --> D[Compress Files]
+    --> E[Store ZIP]
+    --> F[Update Redis<br/>Completed]
+    --> G[ACK RabbitMQ]
+```
+
+> [!TIP]
+> Multiple Worker instances can consume the same RabbitMQ queue, allowing the system to scale horizontally without changing the API Gateway.
+
+## 🛠 Tech Stack
+
+| Technology    | Purpose             |
+| ------------- | ------------------- |
+| Node.js       | Backend Runtime     |
+| Express.js    | REST API            |
+| RabbitMQ      | Message Broker      |
+| Redis         | Job Status Cache    |
+| Docker        | Containerization    |
+| Archiver      | ZIP Compression     |
+| UUID          | Job ID Generator    |
+| Apache JMeter | Performance Testing |
+| Postman       | API Testing         |
+
+## 📁 Folder Structure
 
 ```text
-asynclog
-│
+asynclog/
 ├── api/
-│   ├── src/
-│   │   ├── controllers/
-│   │   ├── middleware/
-│   │   ├── rabbitmq/
-│   │   ├── redis/
-│   │   ├── routes/
-│   │   ├── utils/
-│   │   └── app.js
-│   └── package.json
-│
 ├── worker/
-│   ├── src/
-│   │   ├── services/
-│   │   ├── rabbitmq.js
-│   │   ├── redis.js
-│   │   └── worker.js
-│   └── package.json
-│
 ├── storage/
-│   ├── raw_logs/
-│   └── exports/
-│
 ├── scripts/
-│
 ├── docs/
-│
 ├── docker-compose.yml
 └── README.md
 ```
 
----
+## ⚙ Installation
 
-# ⚙ Installation
-
-Clone repository
+Clone the repository.
 
 ```bash
 git clone https://github.com/luqelha/asynchronous-log-system.git
@@ -159,48 +127,21 @@ git clone https://github.com/luqelha/asynchronous-log-system.git
 cd asynchronous-log-system
 ```
 
----
-
-Install dependencies
-
-API
+Install dependencies.
 
 ```bash
-cd api
+cd api && npm install
 
-npm install
+cd ../worker && npm install
 ```
 
-Worker
+## 🐳 Docker Setup
 
-```bash
-cd worker
-
-npm install
-```
-
----
-
-# 🐳 Docker Setup
-
-Run all services
+Start infrastructure services.
 
 ```bash
 docker compose up -d
 ```
-
-Verify running containers
-
-```bash
-docker ps
-```
-
-Expected Services
-
-- RabbitMQ
-- Redis
-
----
 
 RabbitMQ Dashboard
 
@@ -208,19 +149,12 @@ RabbitMQ Dashboard
 http://localhost:15672
 ```
 
-Username
+Default Credentials
 
 ```
-admin
+Username : admin
+Password : admin
 ```
-
-Password
-
-```
-admin
-```
-
----
 
 Redis CLI
 
@@ -228,9 +162,7 @@ Redis CLI
 docker exec -it redis redis-cli
 ```
 
----
-
-# 🚀 Running the Project
+## Running the Project
 
 API Gateway
 
@@ -248,17 +180,16 @@ cd worker
 npm run dev
 ```
 
----
+## 📡 API Documentation
 
-# 📡 API Endpoints
+| Method | Endpoint         | Description         |
+| ------ | ---------------- | ------------------- |
+| POST   | `/export/logs`   | Create export job   |
+| GET    | `/status/:jobId` | Retrieve job status |
 
-## Export Logs
+### POST /export/logs
 
-```
-POST /export/logs
-```
-
-Example Request
+Request
 
 ```json
 {
@@ -267,7 +198,7 @@ Example Request
 }
 ```
 
-Example Response
+Response
 
 ```json
 {
@@ -277,15 +208,7 @@ Example Response
 }
 ```
 
----
-
-## Check Status
-
-```
-GET /status/:jobId
-```
-
-Example Response
+### GET /status/:jobId
 
 ```json
 {
@@ -295,128 +218,71 @@ Example Response
 }
 ```
 
----
+## 📈 Performance Testing
 
-```mermaid
-flowchart TD
-    A[Receive Job] --> B[Update Redis<br/>Status: Processing]
-    B --> C[Read Raw Logs]
-    C --> D[Compress Files]
-    D --> E[Store ZIP]
-    E --> F[Update Redis<br/>Status: Completed]
-    F --> G[ACK RabbitMQ]
-```
+Performance testing was conducted using **Apache JMeter** under multiple concurrent request scenarios.
 
----
+| Scenario  | Requests | Avg (ms) | Max (ms) | Throughput (req/s) | Error |
+| --------- | -------: | -------: | -------: | -----------------: | ----: |
+| 10 Users  |       10 |       19 |       83 |               2.22 |    0% |
+| 25 Users  |       25 |        6 |        9 |               5.20 |    0% |
+| 50 Users  |       50 |       16 |      131 |              10.32 |    0% |
+| 100 Users |      100 |        9 |       89 |              20.18 |    0% |
+| 200 Users |      200 |        9 |       85 |              40.13 |    0% |
 
-# 🐇 RabbitMQ Flow
+> [!NOTE]
+> The API Gateway consistently returned responses in well under one second across all test scenarios because compression tasks were delegated to asynchronous Worker Services via RabbitMQ.
 
-<p align="center">
-<img src="docs/rabbitmq.png" width="850">
-</p>
+## 📷 Screenshots
 
-The API Gateway publishes export jobs into the `export_logs` queue. Worker Service continuously consumes messages from the queue and processes them asynchronously.
-
----
-
-# 📦 Redis Flow
-
-<p align="center">
-<img src="docs/rediscli.png" width="850">
-</p>
-
-Redis stores each Job ID as a key, allowing clients to retrieve job progress efficiently without querying a relational database.
-
----
-
-# 📈 Performance Testing
-
-Performance testing was conducted using **Apache JMeter** with multiple concurrent user scenarios.
-
-| Scenario           | Requests | Avg Response (ms) | Max Response (ms) | Throughput (req/s) | Error Rate | Result  |
-| ------------------ | -------: | ----------------: | ----------------: | -----------------: | ---------: | ------- |
-| Test 1 (10 Users)  |       10 |                19 |                83 |               2.22 |      0.00% | ✅ Pass |
-| Test 2 (25 Users)  |       25 |                 6 |                 9 |               5.20 |      0.00% | ✅ Pass |
-| Test 3 (50 Users)  |       50 |                16 |               131 |              10.32 |      0.00% | ✅ Pass |
-| Test 4 (100 Users) |      100 |                 9 |                89 |              20.18 |      0.00% | ✅ Pass |
-| Test 5 (200 Users) |      200 |                 9 |                85 |              40.13 |      0.00% | ✅ Pass |
-
-### Summary
-
-- Response time remained well below **1 second**.
-- Error rate remained **0%** across all test scenarios.
-- Throughput increased proportionally with the number of concurrent requests.
-- API Gateway remained responsive because compression tasks were delegated to Worker Service via RabbitMQ.
-
----
-
-# 📷 Screenshots
-
-## Architecture
+### System Architecture
 
 ![](docs/architecture.png)
 
----
-
-## Sequence Diagram
+### Sequence Diagram
 
 ![](docs/sequencediagram.png)
 
----
-
-## RabbitMQ Dashboard
+### RabbitMQ Dashboard
 
 ![](docs/rabbitmq.png)
 
----
-
-## Redis CLI
+### Redis CLI
 
 ![](docs/rediscli.png)
 
----
-
-## POST Endpoint
+### POST Endpoint
 
 ![](docs/postmanpost.png)
 
----
-
-## GET Status Endpoint
+### GET Status Endpoint
 
 ![](docs/postmanget.png)
 
----
-
-## System Demo
+### System Demo
 
 ![](docs/system-demo.gif)
 
----
+## 📌 Roadmap
 
-# 🔮 Future Improvements
-
-- JWT Authentication
-- Download endpoint for ZIP files
-- Multiple Worker instances
-- Kubernetes deployment
-- Prometheus & Grafana monitoring
-- CI/CD pipeline using GitHub Actions
-- Object Storage integration (MinIO / AWS S3)
-- WebSocket for real-time status updates
-- Retry & Dead Letter Queue (DLQ)
+- [ ] JWT Authentication
+- [ ] Download ZIP Endpoint
+- [ ] Multiple Worker Instances
+- [ ] Dead Letter Queue (DLQ)
+- [ ] Kubernetes Deployment
+- [ ] Prometheus & Grafana Monitoring
+- [ ] GitHub Actions CI/CD
+- [ ] AWS S3 / MinIO Integration
+- [ ] WebSocket-based Real-Time Status
 
 ---
 
-# 👨‍💻 Author
+## 👨‍💻 Author
 
 **Muhammad Luqmanul Hakim**
 
-GitHub: https://github.com/luqelha
-
-LinkedIn: https://linkedin.com/in/muhammad-luqmanul-hakim-77047326a
-
----
+- GitHub: https://github.com/luqelha
+- LinkedIn: https://linkedin.com/in/muhammad-luqmanul-hakim-77047326a
 
 <div align="center">
 

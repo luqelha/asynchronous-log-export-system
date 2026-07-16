@@ -297,28 +297,14 @@ Example Response
 
 ---
 
-# 👷 Worker Flow
-
-```text
-Receive Job
-      │
-      ▼
-Update Redis (Processing)
-      │
-      ▼
-Read Raw Logs
-      │
-      ▼
-Compress Files
-      │
-      ▼
-Store ZIP
-      │
-      ▼
-Update Redis (Completed)
-      │
-      ▼
-ACK RabbitMQ
+```mermaid
+flowchart TD
+    A[Receive Job] --> B[Update Redis<br/>Status: Processing]
+    B --> C[Read Raw Logs]
+    C --> D[Compress Files]
+    D --> E[Store ZIP]
+    E --> F[Update Redis<br/>Status: Completed]
+    F --> G[ACK RabbitMQ]
 ```
 
 ---

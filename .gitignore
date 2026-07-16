@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Generated Files
+storage/raw_logs/
+storage/exports/
+result/
+
+# Archives
+*.zip
+*.rar
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# npm
+package-lock.json
